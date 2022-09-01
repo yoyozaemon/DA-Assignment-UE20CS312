@@ -1,0 +1,279 @@
+---
+title: "UE20CS312 - Data Analytics - Worksheet 1a - part - 2 - EDA with R | ANOVA"
+subtitle: "PES University"
+author:
+- 'Vijay J, Dept. of CSE - PES2UG20CS815'
+output: pdf_document
+date: "2022-09-01"
+urlcolor: blue
+editor_options:
+markdown:
+wrap: 72
+---
+
+#**Part I. Exploratory Data Analysis with R**
+
+#**Problem-1**
+#Solution
+```{r}
+library(tidyverse)
+library(dbplyr)
+library(dplyr)
+cbc_df <- read.csv('CharlesBookClubDataset.csv')
+sapply(cbc_df[c('X', 'Seq.', 'ID.','Gender','M','R','F','FirstPurch','ChildBks','YouthBks','CookBks','DoItYBks','RefBks','ArtBks','GeogBks','ItalCook','ItalAtlas','ItalArt','Florence','Related.Purchase','Yes_Florence','No_Florence')], sd)
+summary(cbc_df)
+#Standard Deviation
+sapply(cbc_df[c('X', 'Seq.', 'ID.','Gender','M','R','F','FirstPurch','ChildBks','YouthBks','CookBks','DoItYBks','RefBks','ArtBks','GeogBks','ItalCook','ItalAtlas','ItalArt','Florence','Related.Purchase','Yes_Florence','No_Florence')], sd)
+
+```
+
+##To print the number of missing values in each column,
+# Number of missing values in each column
+```{r}
+colSums(is.na(cbc_df))
+```
+
+#**Problem-2**
+#Solution
+```{r}
+plot_hist_20_bins <- function() {
+  Recency <- cbc_df$R
+  Frequency <- cbc_df$F
+  Monetary <- cbc_df$M
+  hist(Recency, breaks=20)
+  hist(Frequency, breaks=20)
+  hist(Monetary, breaks=20)
+}
+plot_hist_20_bins()
+```
+```{r}
+get_mode <- function(x) {
+  mode0 <- names(which.max(table(x)))
+  if(is.numeric(x)) return(as.numeric(mode0))
+  mode0
+}
+
+# Apply to all necessary columns
+
+cbc_df$R[is.na(cbc_df$R)] <- get_mode(cbc_df$R)
+cbc_df$F[is.na(cbc_df$F)] <- get_mode(cbc_df$F)
+cbc_df$M[is.na(cbc_df$M)] <- get_mode(cbc_df$M)
+```
+##To check our results,
+# Number of missing values
+```{r}
+colSums(is.na(cbc_df))
+```
+# Plot histograms after imputation
+```{r}
+plot_hist_20_bins()
+```
+
+#**Problem-3**
+#Solution
+
+# Create new features that are a result of binning the previous ones
+
+```{r}
+cbc_df <- cbc_df %>% mutate(Rcode=cut(cbc_df$R,
+                                      breaks=unique(
+                                      quantile(cbc_df$R,
+                                      probs=seq.int(0,1,by=1/4))),
+                                      include.lowest=TRUE),
+                                      
+                            Mcode=cut(cbc_df$M,
+                                      breaks=unique(
+                                      quantile(cbc_df$M,
+                                      probs=seq.int(0,1,by=1/5))),
+                                      include.lowest=TRUE),
+                            
+                            Fcode=cut(cbc_df$F,
+                                      breaks=unique(
+                                      quantile(cbc_df$F,
+                                      probs=seq.int(0,1,by=1/4))),
+                                      include.lowest=TRUE))
+```
+
+# Set the level strings
+```{r}
+levels(cbc_df$Mcode) <- c('$15-$112', '$112-$181', '$181-$242', '$242-$296', '$296-$479')
+levels(cbc_df$Rcode) <- c('2-8 months', '8-14 months', '14-16 months', '16-36 months')
+levels(cbc_df$Fcode) <- c('1-2 books', '2-6 books', '6-12 books')
+```
+
+#Summary
+```{r}
+summary(cbc_df[c('Mcode', 'Rcode', 'Fcode')])
+```
+
+
+#**Problem-4**
+#Solution
+#4.1 Bar Graphs
+
+# Bar Graph
+```{r}
+ggplot(cbc_df, aes(x = Fcode)) + geom_bar() + coord_flip () + labs(x = "Frequency")
+ggplot(cbc_df, aes(x = Rcode)) + geom_bar() + coord_flip () + labs(x = "Recency")
+ggplot(cbc_df, aes(x = Mcode)) + geom_bar() + coord_flip () + labs(x = "Monetary")
+ggplot(cbc_df, aes(x = FirstPurch)) + geom_bar() + coord_flip () + labs(x = "First Purchase")
+```
+
+#4.2 Box Plot
+# Create a categorical feature Florence
+```{r}
+cbc_df$Florence <- factor(cbc_df$Florence, labels = c("No", "Yes"))
+```
+#Box Plot
+```{r}
+ggplot(cbc_df, aes_string(x = "Florence", y = "R", fill = "Florence")) +
+geom_boxplot() +
+coord_flip() +
+labs(x = "Recency", y = "Did the customer make a purchase?") +
+theme(legend.position = c(0.9, 0.9))
+```
+
+```{r}
+ggplot(cbc_df, aes_string(x = "Florence", y = "M", fill = "Florence")) +
+geom_boxplot() +
+coord_flip() +
+labs(x = "Monetary", y = "Did the customer make a purchase?") +
+theme(legend.position = c(0.9, 0.9))
+```
+
+```{r}
+ggplot(cbc_df, aes_string(x = "Florence", y = "F", fill = "Florence")) +
+geom_boxplot() +
+coord_flip() +
+labs(x = "Frequency", y = "Did the customer make a purchase?") +
+theme(legend.position = c(0.9, 0.9))
+```
+
+#4.3 Density Plot
+#Density Plots
+
+```{r}
+ggplot(cbc_df, aes_string(x = "R", fill = "Florence")) +
+geom_density(alpha = 0.4) +
+labs(x = "Recency") +
+theme(legend.position = c(0.9, 0.9))
+```
+
+```{r}
+ggplot(cbc_df, aes_string(x = "M", fill = "Florence")) +
+geom_density(alpha = 0.4) +
+labs(x = "Monetary") +
+theme(legend.position = c(0.9, 0.9))
+```
+
+```{r}
+ggplot(cbc_df, aes_string(x = "F", fill = "Florence")) +
+geom_density(alpha = 0.4) +
+labs(x = "Frequency") +
+theme(legend.position = c(0.9, 0.9))
+```
+
+##Part II. ANOVA
+
+#**Problem-1**
+1. Consider the dataset. Which type of ANOVA can Scully use? (Justify why the particular test)
+2. What function(s) could have been used by Scully for ANOVA if he uses the R programming language?
+3. What does the output of this/these functions tell Scully? (Specify hypotheses and what each column in
+the summary of the output means considering 5% significance)
+#Add Libraries and Read CSV
+
+```{r}
+library(dplyr)
+library(ggplot2)
+library(ggpubr)
+library(broom)
+library(car)
+
+data <- read.csv('Scenario 1.csv')
+print(data)
+```
+#Solution
+#1. One-way Anova [Fisher’s test]
+#2. aov()
+```{r}
+scene.1.file <- read.csv('Scenario 1.csv')
+one.way <- aov(No.of.items ~ POI, data = scene.1.file)
+summary(one.way)
+```
+#3. Description of each column. Hypotheses of One-way ANOVA test and since p value > 0.05 there is no relation between the person of interest and the average number of evidence collected against them.
+
+#**Problem-2**
+1. Consider the data. Which type of ANOVA can Scully use? (Justify why the particular test)
+2. What function(s) could have been used by Scully for the ANOVA if he uses the R programming
+language?
+3. What does the output of this/these functions tell Scully? (Specify hypotheses and what each column in
+the summary of the output means considering 5% significance)
+4. Hitchcock thinks that Scully has missed a task which completes the ANOVA test. What should Scully
+have thought of? Hint: Philosophically, a hypothesis is a proposition made as a basis for reasoning,
+without any assumption of its truth.
+#Add CSV
+```{r}
+data <- read.csv('Scenario 2.csv')
+```
+#Solution
+#1. Two-way Anova
+#2. aov()
+```{r}
+scene.2.file <- read.csv('Scenario 2.csv')
+two.way <- aov(No.of.items ~ POI * Priority, data = scene.2.file)
+summary(two.way)
+```
+#3. Description of each column. Hypotheses of Two way ANOVA test.
+#• since p value < 0.05 there is maybe a relation between the person of interest and the average number of
+#evidence collected against them.
+#• since p value < 0.05 there is maybe a relation between the Priority and the average number of evidence
+#collected against them.
+#• Categorical variables cannot be compared with F Statistic and can only be ensured to be independent
+#variables by experimental design. (Wrong answer since p value > 0.05 there is no interaction between
+#the Priority and person of Interest.)
+#4. 3 assumptions of 2 way ANOVA are:
+#• Homogeneity of variance (homoscedasticity) [Any one graph with brief explanation on why]
+#• Normally-distributed dependent variable
+#• Independence of observations: Categorical variables cannot be compared with F Statistic and can
+#only be ensured to be independent variables by experimental design. (Wrong answer since p
+#value > 0.05 there is no interaction between the Priority and person of Interest.)
+```{r}
+plot(two.way)
+```
+
+```{r}
+hist(two.way$residuals,main="Histogram of Residuals",xlab="Residuals")
+```
+
+```{r}
+hist(scene.2.file$No.of.items,main="Histogram of Dependent Variable",xlab="No of Items")
+```
+
+#**Problem-3**
+#Solution
+
+```{r}
+tukey.two.way<-TukeyHSD(aov(formula = No.of.items ~ factor(POI) + Priority, data = scene.2.file))
+
+tukey.two.way
+```
+
+```{r}
+par(mar=c(5,8,4,1)+.1)
+tukey.plot.test<-TukeyHSD(aov(formula = No.of.items ~ factor(POI), data = scene.2.file))
+plot(tukey.plot.test, las = 1)
+```
+
+```{r}
+par(mar=c(5,8,4,1)+.1)
+tukey.plot.test<-TukeyHSD(aov(formula = No.of.items ~ Priority, data = scene.2.file))
+plot(tukey.plot.test, las = 1)
+```
+
+```{r}
+par(mar=c(5,8,4,1)+.1)
+tukey.plot.test<-TukeyHSD(aov(formula = No.of.items ~ Priority, data = scene.2.file))
+plot(tukey.plot.test, las = 1)
+```
+
+
