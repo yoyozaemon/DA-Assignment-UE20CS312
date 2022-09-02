@@ -1,0 +1,131 @@
+---
+title: "UE20CS312 - Data Analytics - Worksheet 1b - Correlation Analysis"
+author: "Vijay J, Dept. of CSE - PES2UG20CS815"
+date: "2022-09-01"
+output: pdf_document
+urlcolor: blue
+editor_options:
+markdown:
+wrap: 72
+---
+
+
+#Add Library and CSV path
+
+```{r}
+library(ggpubr)
+library(dplyr)
+library(ggplot2)
+df <- read.csv('road_accidents_india_2016.csv', row.names=1)
+```
+
+#**Problem - 1**
+#Solution
+```{r}
+acc_cols <- grep("Total.Accidents$", colnames(df), ignore.case=T, value=TRUE)
+                 total_accidents <- data.frame(state..ut=df$State..UT,
+                                    total_acc=rowSums(df[ , c(acc_cols)], na.rm=TRUE))
+print.data.frame(total_accidents)
+```
+
+#**Problem - 2**
+#Solution
+```{r}
+death_cols <- grep("Persons.Killed$", colnames(df), ignore.case=T, value=TRUE)
+total_accidents$total_deaths <- rowSums(df[ , c(death_cols)])
+total_accidents$fatality_rate <- total_accidents$total_deaths/total_accidents$total_acc
+total_accidents$mist_rate <- df$Mist..Foggy...Total.Accidents/total_accidents$total_acc
+print.data.frame(total_accidents)
+```
+
+#Plot the fatality rate and mist/foggy rate
+```{r}
+plot(x=total_accidents$fatality_rate, y=total_accidents$mist_rate,
+col='#69b3a2', pch=19)
+```
+
+```{r}
+rho <- cor(total_accidents$fatality_rate,
+           total_accidents$mist_rate, method='pearson')
+rho
+```
+
+```{r}
+corr_test = cor.test(total_accidents$fatality_rate,
+                     total_accidents$mist_rate, method='pearson')
+print(corr_test)
+```
+
+```{r}
+ggscatter(total_accidents, x='fatality_rate', y='mist_rate',
+          add='reg.line', conf.int=TRUE,
+          cor.coef=TRUE, cor.method = 'pearson')
+```
+
+#**Problem - 3**
+#Solution
+```{r}
+total_accidents$acc_ranks <- rank(desc(total_accidents$total_acc),
+                                  ties.method='random')
+total_accidents$death_ranks <- rank(desc(total_accidents$total_deaths),
+                                    ties.method='random')
+```
+
+```{r}
+rs <- cor(total_accidents$acc_ranks, total_accidents$death_ranks,
+method='spearman')
+rs
+```
+
+```{r}
+print(cor.test(total_accidents$acc_ranks,
+               total_accidents$death_ranks, method='spearman'))
+```
+
+```{r}
+ggscatter(total_accidents, x='acc_ranks', y='death_ranks',
+          add='reg.line', conf.int=TRUE,
+          cor.coef=TRUE, cor.method = 'spearman')
+```
+
+```{r}
+degrees <- nrow(total_accidents) - 2
+t_stat <- (rs - 0.2)/sqrt((1 - rs*rs)/(nrow(total_accidents) - 2))
+t_stat
+```
+
+```{r}
+2 * pt(q=t_stat, df=degrees, lower.tail=FALSE)
+```
+
+#**Problem - 4**
+#Solution
+```{r}
+total_accidents$hail_binary <- ifelse(df$Hail.Sleet...Total.Accidents > 0, 1, 0)
+total_accidents$rain_acc <- df$Rainy...Total.Accidents
+print.data.frame(total_accidents[, c('state..ut', 'hail_binary', 'rain_acc')])
+```
+
+```{r}
+cor.test(total_accidents$rain_acc,
+         total_accidents$hail_binary, method='pearson')
+```
+
+#**Problem - 5**
+#Solution
+#Add Library
+```{r}
+library(psych)
+library(ggplot2)
+```
+
+```{r}
+total_accidents$dust_binary <- ifelse(df$Dust.Storm...Total.Accidents > 0, 1, 0)
+contingency_table <- table(total_accidents[, c('dust_binary', 'hail_binary')])
+contingency_table
+```
+
+```{r}
+phi(contingency_table)
+```
+
