@@ -1,0 +1,118 @@
+---
+title: 'Worksheet 2b : Multiple Linear Regression'
+author: "Vijay J, Dept. of CSE - PES2UG20CS815"
+date: "2022-09-14"
+output: pdf_document
+urlcolor: blue
+editor_options:
+markdown:
+wrap: 72
+---
+
+## Multiple Linear Regression
+Multiple Linear Regression (MLR) is a statistical technique that uses several explanatory variables to predict the outcome of response variable.The goal of MLR is to model a linear relationship between explanatory(independent) variables and response(dependent) variables.
+
+## Loading the Dataset
+```{r}
+library(tidyverse)
+library(ggplot2)
+library(car)
+library(corrplot)
+library(dplyr)
+library(dbplyr)
+spotify_df <- read_csv('spotify.csv')
+```
+
+## Problem - 1
+#Solution
+```{r}
+#Checking the Missing Dataset
+sum(is.na(spotify_df))
+```
+
+```{r}
+#Normalization
+colSums(is.na(spotify_df))
+spotify_df <- as.data.frame(scale(spotify_df))
+spotify_df
+```
+## Problem - 2
+#Solution
+```{r}
+full_model <- lm(energy ~ . , data=spotify_df)
+summary(full_model)
+```
+
+## Problem - 3
+#Solution
+```{r}
+#correlation
+correlation <- cor(spotify_df)
+corrplot(correlation, method = 'number')
+```
+
+```{r}
+#Plot-1
+plot(x=spotify_df$loudness, y=spotify_df$energy, xlab ="Loudness", ylab="Energy", main="Loudness vs Energy")
+```
+
+```{r}
+#Plot-2
+plot(x=spotify_df$instrumentalness, y=spotify_df$energy, xlab="Instrumentalness", ylab="Energy", main="Instrumentalness vs Energy")
+```
+
+```{r}
+#Reduce Model
+reduce_model <- lm(energy ~ loudness + instrumentalness, data = spotify_df)
+summary(reduce_model)
+```
+
+
+## Problem - 4
+#Solution
+```{r}
+#Partial f-test
+anova(reduce_model, full_model)
+```
+
+## Problem - 5
+#Solution
+#AIC - Akaike Information Criterio
+```{r}
+library(olsrr)
+stepwise_model <- lm(energy ~ loudness + acousticness + danceability + valence + instrumentalness + mode + key, data=spotify_df)
+summary(stepwise_model)
+```
+
+## Problem - 6
+#Solution
+```{r}
+#Plot all the residual
+print("Full Model residual Plot")
+plot(full_model$residuals, pch = 16, col = "red")
+abline(h = 0, lty = 2)
+ols_plot_resid_hist(full_model)
+print("Reduced Model residual Plot")
+plot(reduce_model$residuals, pch = 16, col = "red")
+abline(h = 0, lty = 2)
+ols_plot_resid_hist(reduce_model)
+print("StepWise Model residual Plot")
+plot(stepwise_model$residuals, pch = 16, col = "red")
+abline(h = 0, lty = 2)
+ols_plot_resid_hist(stepwise_model)
+
+```
+
+## Problem - 7
+#Solution
+```{r}
+#Multicollinearity and Outliers
+ols_vif_tol(full_model)
+cooksd <- ols_plot_cooksd_chart(full_model)
+
+#4/n and remove the outliers
+new_df <- spotify_df[-c(30,35,49,84,114,120,127,144,153,159,171,172,187,191),]
+new_full_model <- lm(energy ~ . , data =new_df)
+summary(new_full_model)
+```
+
