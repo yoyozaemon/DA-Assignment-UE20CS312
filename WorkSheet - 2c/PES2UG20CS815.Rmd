@@ -1,0 +1,11 @@
+---
+title: "Worksheet 2c - Logistic Regression"
+author: "Vijay J, Dept. of CSE - PES2UG20CS815"
+date: "2022-09-19"
+output: pdf_document
+urlcolor: blue
+editor_options:
+markdown:
+wrap: 72
+---
+
