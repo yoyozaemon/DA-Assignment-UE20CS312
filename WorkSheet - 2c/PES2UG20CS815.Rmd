@@ -8,4 +8,104 @@ editor_options:
 markdown:
 wrap: 72
 ---
+##Loading DataSet and Adding Library
+```{r}
+library(tidyverse)
+library(InformationValue)
+library(caTools)
+library(glmnet)
+library(dplyr)
+char_preds <- read.csv('got_characters.csv')
+```
 
+##Problem - 1
+#Solution
+```{r}
+library(dplyr)
+char_pred <- replace(char_preds, char_preds == 0, NA)
+char_pred <- mutate_all(char_preds, list(~na_if(.,"")))
+char_pred
+length(unique(char_pred$name))
+sort(((colMeans(is.na(char_pred)))*100),decreasing = TRUE)
+```
+
+##Problem - 2
+#Solution
+#Step - 1
+```{r}
+char_pred <- subset(char_preds,select = -c(book1,isMarried,spouse,isAliveSpouse,boolDeadRelations,numDeadRelations,isPopular,father,heir,mother,isAliveHeir,isAliveMother,isAliveFather))
+char_pred
+sort(((colMeans(is.na(char_pred)))*100),decreasing = TRUE)
+```
+
+#Step - 2
+```{r}
+char_pred[,c("culture")] <- lapply(char_pred[, c("culture")], as.factor)
+char_pred[,c("culture")] <- sapply(char_pred[, c("culture")], unclass)
+
+ggplot(char_pred, aes(x=age)) + geom_bar()
+char_pred$age[is.na(char_pred$age)] = -1
+ggplot(char_pred, aes(x=age)) + geom_bar()
+```
+
+##Problem - 3
+#Solution
+#Step - 1
+```{r}
+table(char_pred$actual)/length(char_pred$actual)
+```
+
+#Step - 2
+```{r}
+input_ones <- char_pred[which(char_pred$actual == 1), ]
+input_zeros <- char_pred[which(char_pred$actual == 0), ]  # all 0's
+set.seed(5)  
+training_ones <- input_ones[sample(1: nrow(input_ones), .7*nrow(input_zeros)),]
+training_zeros <- input_zeros[sample(1: nrow(input_zeros), .7*nrow(input_zeros)),]
+
+Training_Data <- rbind(training_ones, training_zeros)
+Training_Data <- Training_Data[sample(1: nrow(Training_Data)),]
+
+test_ones <- input_ones[-sample(1:nrow(input_ones), 0.7*nrow(input_zeros)), ]
+test_zeros <- input_zeros[-sample(1: nrow(input_zeros), .7*nrow(input_zeros)),]
+
+testData <- rbind(test_ones, test_zeros)
+testData <- testData[sample(1:  nrow(testData)),]
+
+table(Training_Data$actual)
+table(testData$actual)
+```
+
+##Problem - 4
+#Solution
+#Step - 1
+```{r}
+model <- glm(actual ~ age + popularity + culture + book5 + male + isNoble, family = binomial(link="logit"), data=trainingData)
+summary(model)
+
+pred <- plogis(predict(model, testData))
+cutoff <- optimalCutoff(testData$actual, pred)[1] 
+cutoff
+```
+
+
+#Step - 2
+```{r}
+library(ROCR)
+pred_test <- predict(model,testData,type="response")
+ROCR_pred_test <- prediction(pred_test,testData$actual)
+ROCR_perf_test <- performance(ROCR_pred_test,'tpr','fpr')
+plot(ROCR_perf_test,colorize=TRUE,print.cutoffs.at=seq(0.1,by=0.1))
+```
+
+##Problem - 5
+#Solution
+```{r}
+misClassError(testData$actual, pred_test)
+sensitivity(testData$actual, pred_test)
+specificity(testData$actual, pred_test)
+table(Actualvalue=testData$actual,Predictedvalue=pred_test>0.1111903)
+
+plotROC(testData$actual, pred_test)
+```
+#*Analysis:The AUROC curve is equal to 0.6475 and it is greater the AUROC curve, the better the accuracy of the logit model.
