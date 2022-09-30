@@ -1,0 +1,138 @@
+---
+title: "Worksheet 3a - Basic Forecasting Techniques"
+author: "Vijay J, Dept. of CSE - PES2UG20CS815"
+date: "2022-09-30"
+output: pdf_document
+urlcolor: blue
+editor_options:
+markdown:
+wrap: 72
+---
+
+##Loading DataSet and Adding Library
+```{r}
+library(ggplot2)
+library(tidyverse)
+library(InformationValue)
+library(dplyr)
+library(mde)
+library(fpp2)
+df<- read.csv('sales.csv')
+head(df)
+```
+
+Pick out the `Sales` column in the `data.frame`. Most of our time-series analysis will be done on this column.
+```{r}
+sales <- df$Sales
+head(sales)
+```
+
+The `ts` function is used to create the `ts` object in R. Frequency is 52 as it is weekly data. 
+The start is specified like `start= c(y, m, d)` as we are dealing with weekly data. If it was monthly data we can omit the `d` and for yearly data we can omit the `m` as well.(`c` is the combine function in R)
+```{r}
+sales_ts <- ts(sales, frequency = 52, start=c(2010, 2, 5))
+sales_ts
+```
+
+Visualize the Time-Series of `Sales` column
+```{r}
+plot.ts(sales_ts)
+```
+
+##Problem - 1
+#Solution
+#Decomposing the sales
+```{r}
+decomposed <- decompose(sales_ts, 'additive')
+plot(as.ts(decomposed$seasonal))
+plot(as.ts(decomposed$trend))
+plot(as.ts(decomposed$random))
+```
+
+```{r}
+plot(decomposed)
+```
+
+
+##Problem - 2
+#Solution
+#Single Exponential Smoothing
+```{r}
+sales_time_s.train <- window(sales_ts, end=c(2020,40))
+sales_time_s.test <- window(sales_ts, start =c(2011,2))
+
+ses_sales_time_s <- ses(sales_time_s.train,alpha =.2,h=100)
+autoplot(forecast((ses_sales_time_s),col="pink"))
+```
+
+#Double Exponential Smoothing
+```{r}
+holt_double_sales_time_s<-holt(sales_time_s.train)
+plot((holt_double_sales_time_s),col="red")
+```
+
+```{r}
+sales_time_s.hw<-ets(sales_time_s.train)
+plot(forecast(sales_time_s.hw),col="yellow")
+```
+
+#Triple Exponential Smoothing
+```{r}
+triple_s=HoltWinters(sales_ts,alpha=0.2, beta=0.5, gamma=0.8, seasonal = "additive")
+plot(triple_s,col = "blue")
+```
+
+##Problem - 3
+#Solution
+```{r}
+reg_model<- lm(sales ~ (Holiday_Flag + Unemployment + Laptop_Demand + Temperature + Fuel_Price + CPI),data = df)
+y_pred = predict(reg_model)
+summary(reg_model)
+plot(y_pred)
+plot(predict(y_pred),df$Sales,xlab="Predicted Values",ylab="Observed Values")
+abline(a = 0,                                        
+       b = 1,
+       col = "blue",
+       lwd = 2)
+```
+
+
+##Problem - 4
+#Solution
+```{r}
+laptop_demand <- ts(df$Laptop_Demand, frequency = 23, start=c(2010, 2, 5))
+head(laptop_demand)
+plot.ts((laptop_demand),col="red")
+Holt_laptop_demand <- HoltWinters(laptop_demand)
+plot(laptop_demand, ylab="laptop_sales", xlim=c(2010,2013),col="red")
+lines(Holt_laptop_demand$fitted[,1], col="blue")
+```
+
+
+##Problem - 5
+#Solution
+#Accuracy of Single Exponential Smoothing
+```{r}
+accuracy(ses_sales_time_s)
+```
+
+#Accuracy of Double Exponential Smoothing
+```{r}
+accuracy(holt_double_sales_time_s)
+accuracy(sales_time_s.hw)
+```
+
+#Accuracy of Triple Exponential Smoothing
+```{r}
+accuracy(forecast(triple_s))
+```
+
+#Accuracy of the Regression Model
+```{r}
+accuracy(reg_model)
+```
+
+
+#Triple Exponential Smoothing (Holt Winters Smoothing) is the best Exponential Smoothing method.
+#No, regression is not better than Exponential Smoothing.
+# In addition to the equations for single and double smoothing, a third equation is used to handle the seasonality aspect. This is why Triple Exponential Smoothing is better as in the situation given above laptop sales has the seasonality aspect which triple exponential smoothing takes care.
